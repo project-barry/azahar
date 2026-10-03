@@ -67,6 +67,16 @@ public:
         return swapchain.GetSurfaceFormat().format;
     }
 
+    /// BarryTrace: 0 for the main window, 1 for the secondary one.
+    void SetTraceIndex(int index) noexcept {
+        trace_index = index;
+        swapchain.trace_index = index;
+    }
+
+    int TraceIndex() const noexcept {
+        return trace_index;
+    }
+
 private:
     void PresentThread(std::stop_token token);
 
@@ -100,6 +110,7 @@ private:
     bool blit_supported;
     bool use_present_thread{true};
     void* last_render_surface{};
+    int trace_index{0};
 };
 
 } // namespace Vulkan

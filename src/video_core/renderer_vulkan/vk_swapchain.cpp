@@ -7,6 +7,7 @@
 #include "common/logging/log.h"
 #include "common/microprofile.h"
 #include "common/settings.h"
+#include "video_core/renderer_vulkan/vk_barry_trace.h"
 #include "video_core/renderer_vulkan/vk_instance.h"
 #include "video_core/renderer_vulkan/vk_swapchain.h"
 
@@ -105,8 +106,15 @@ bool Swapchain::AcquireNextImage() {
     case vk::Result::eSuccess:
         break;
     case vk::Result::eSuboptimalKHR:
-    case vk::Result::eErrorSurfaceLostKHR:
+        BarryTrace::For(trace_index).acquire_suboptimal++;
+        needs_recreation = true;
+        break;
     case vk::Result::eErrorOutOfDateKHR:
+        BarryTrace::For(trace_index).acquire_out_of_date++;
+        needs_recreation = true;
+        break;
+    case vk::Result::eErrorSurfaceLostKHR:
+        BarryTrace::For(trace_index).acquire_other++;
         needs_recreation = true;
         break;
     default:
@@ -131,6 +139,7 @@ void Swapchain::Present() {
     try {
         [[maybe_unused]] vk::Result result = instance.GetPresentQueue().presentKHR(present_info);
     } catch (vk::OutOfDateKHRError&) {
+        BarryTrace::For(trace_index).present_out_of_date++;
         needs_recreation = true;
         return;
     } catch (vk::SurfaceLostKHRError&) {

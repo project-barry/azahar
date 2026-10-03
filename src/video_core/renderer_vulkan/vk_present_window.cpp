@@ -6,6 +6,7 @@
 #include "common/settings.h"
 #include "common/thread.h"
 #include "core/frontend/emu_window.h"
+#include "video_core/renderer_vulkan/vk_barry_trace.h"
 #include "video_core/renderer_vulkan/vk_instance.h"
 #include "video_core/renderer_vulkan/vk_platform.h"
 #include "video_core/renderer_vulkan/vk_present_window.h"
@@ -371,6 +372,14 @@ void PresentWindow::NotifySurfaceChanged() {
 }
 
 void PresentWindow::CopyToSwapchain(Frame* frame) {
+    const auto trace_start = BarryTrace::Clock::now();
+    struct TraceCopy {
+        BarryTrace::Timing& timing;
+        BarryTrace::Clock::time_point start;
+        ~TraceCopy() {
+            timing.Add(start);
+        }
+    } trace_copy{BarryTrace::For(trace_index).copy_to_swapchain, trace_start};
     const auto recreate_swapchain = [&] {
 #ifdef ANDROID
         {
@@ -390,6 +399,7 @@ void PresentWindow::CopyToSwapchain(Frame* frame) {
         swapchain.GetWidth() != frame->width || swapchain.GetHeight() != frame->height;
     const bool vsync_changed = vsync_enabled != use_vsync;
     if (vsync_changed || size_changed) [[unlikely]] {
+        BarryTrace::For(trace_index).swapchain_size_or_vsync++;
         vsync_enabled = use_vsync;
         recreate_swapchain();
     }

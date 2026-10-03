@@ -12,6 +12,7 @@
 #include "video_core/gpu.h"
 #include "video_core/pica/pica_core.h"
 #include "video_core/renderer_vulkan/renderer_vulkan.h"
+#include "video_core/renderer_vulkan/vk_barry_trace.h"
 #include "video_core/renderer_vulkan/vk_memory_util.h"
 #include "video_core/renderer_vulkan/vk_shader_util.h"
 
@@ -132,6 +133,7 @@ RendererVulkan::RendererVulkan(Core::System& system, Pica::PicaCore& pica_,
     if (secondary_window) {
         secondary_present_window_ptr = std::make_unique<PresentWindow>(
             *secondary_window, instance, scheduler, IsLowRefreshRate());
+        secondary_present_window_ptr->SetTraceIndex(1);
     }
 }
 
@@ -238,9 +240,13 @@ void RendererVulkan::RenderToWindow(PresentWindow& window, const Layout::Framebu
                                     bool flipped) {
     if (!Settings::values.use_skip_duplicate_frames.GetValue() ||
         Core::PerfStats::game_frames_updated) {
+        BarryTrace::Window& trace = BarryTrace::For(window.TraceIndex());
+        const auto trace_start = BarryTrace::Clock::now();
         Frame* frame = window.GetRenderFrame();
+        trace.get_frame.Add(trace_start);
 
         if (layout.width != frame->width || layout.height != frame->height) {
+            trace.frame_recreated++;
             window.WaitPresent();
             scheduler.Finish();
             window.RecreateFrame(frame, layout.width, layout.height);
@@ -254,6 +260,7 @@ void RendererVulkan::RenderToWindow(PresentWindow& window, const Layout::Framebu
         DrawScreens(frame, layout, flipped);
         scheduler.Flush(frame->render_ready);
         window.Present(frame);
+        trace.render_to_window.Add(trace_start);
         if ((secondaryWindowEnabled && isSecondaryWindow) || (!secondaryWindowEnabled)) {
             Core::PerfStats::game_frames_updated = false;
             screenRendered = true;
@@ -1124,6 +1131,7 @@ void RendererVulkan::DrawCursor(const Layout::FramebufferLayout& layout) {
 }
 
 void RendererVulkan::SwapBuffers() {
+    const auto trace_start = BarryTrace::Clock::now();
     system.perf_stats->StartSwap();
     screenRendered = false;
 #ifndef ANDROID
@@ -1155,6 +1163,7 @@ void RendererVulkan::SwapBuffers() {
         if (!secondary_present_window_ptr) {
             secondary_present_window_ptr = std::make_unique<PresentWindow>(
                 *secondary_window, instance, scheduler, IsLowRefreshRate());
+            secondary_present_window_ptr->SetTraceIndex(1);
         }
         isSecondaryWindow = true;
         RenderToWindow(*secondary_present_window_ptr, secondary_layout, false);
@@ -1175,12 +1184,15 @@ void RendererVulkan::SwapBuffers() {
     }
 #endif
     if (!screenRendered) {
+        BarryTrace::finish_fallback++;
         scheduler.Finish();
     }
 
     system.perf_stats->EndSwap();
     rasterizer.TickFrame();
     EndFrame();
+    BarryTrace::swap_buffers.Add(trace_start);
+    BarryTrace::MaybeReport();
 }
 
 void RendererVulkan::RenderScreenshot() {

@@ -107,6 +107,10 @@ private:
     u32 frame_index = 0;
     bool needs_recreation = true;
     bool low_refresh_rate;
+
+public:
+    /// BarryTrace: 0 for the main window, 1 for the secondary one.
+    int trace_index = 0;
 };
 
 } // namespace Vulkan
