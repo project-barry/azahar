@@ -4,6 +4,8 @@
 
 #include <cmath>
 #include <mutex>
+#include "common/barry_touch_trace.h"
+#include "common/logging/log.h"
 #include "common/settings.h"
 #include "core/3ds.h"
 #include "core/frontend/emu_window.h"
@@ -114,8 +116,16 @@ void EmuWindow::CreateTouchState() {
 }
 
 bool EmuWindow::TouchPressed(unsigned framebuffer_x, unsigned framebuffer_y) {
-    if (!framebuffer_layout.IsWithinTouchscreen(framebuffer_x, framebuffer_y))
+    if (!framebuffer_layout.IsWithinTouchscreen(framebuffer_x, framebuffer_y)) {
+        const auto& r = framebuffer_layout.bottom_screen;
+        LOG_INFO(Frontend,
+                 "barry-touch: {} window {} press at ({},{}) refused: outside the touchscreen "
+                 "({}..{} x {}..{}, bottom screen {})",
+                 BarryTouch::Now(), is_secondary ? 1 : 0, framebuffer_x, framebuffer_y, r.left,
+                 r.right, r.top, r.bottom,
+                 framebuffer_layout.bottom_screen_enabled ? "on" : "off");
         return false;
+    }
     Settings::StereoRenderOption render_3d_mode = get3DMode();
 
     if (framebuffer_x >= framebuffer_layout.width / 2) {

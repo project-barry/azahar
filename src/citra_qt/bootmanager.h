@@ -122,6 +122,7 @@ class GRenderWindow : public QWidget, public Frontend::EmuWindow {
 
 public:
     GRenderWindow(QWidget* parent, EmuThread* emu_thread, Core::System& system, bool is_secondary);
+    int touch_updates = 0; // project-barry touch trace
     ~GRenderWindow() override;
 
     // EmuWindow implementation.

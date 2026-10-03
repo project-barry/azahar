@@ -11,6 +11,7 @@
 #include "citra_qt/bootmanager.h"
 #include "citra_qt/citra_qt.h"
 #include "citra_qt/util/util.h"
+#include "common/barry_touch_trace.h"
 #include "common/color.h"
 #include "common/microprofile.h"
 #include "common/scm_rev.h"
@@ -538,6 +539,10 @@ void GRenderWindow::keyReleaseEvent(QKeyEvent* event) {
 }
 
 void GRenderWindow::mousePressEvent(QMouseEvent* event) {
+    LOG_INFO(Frontend, "barry-touch: {} window {} mouse press button {} at ({:.0f},{:.0f}){}",
+             BarryTouch::Now(), isSecondary() ? 1 : 0, static_cast<int>(event->button()),
+             event->position().x(), event->position().y(),
+             event->source() == Qt::MouseEventSynthesizedBySystem ? " (from touch, ignored)" : "");
     if (event->source() == Qt::MouseEventSynthesizedBySystem) {
         return; // touch input is handled in TouchBeginEvent
     }
@@ -565,6 +570,10 @@ void GRenderWindow::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void GRenderWindow::mouseReleaseEvent(QMouseEvent* event) {
+    LOG_INFO(Frontend, "barry-touch: {} window {} mouse release button {} at ({:.0f},{:.0f}){}",
+             BarryTouch::Now(), isSecondary() ? 1 : 0, static_cast<int>(event->button()),
+             event->position().x(), event->position().y(),
+             event->source() == Qt::MouseEventSynthesizedBySystem ? " (from touch, ignored)" : "");
     if (event->source() == Qt::MouseEventSynthesizedBySystem) {
         return; // touch input is handled in TouchEndEvent
     }
@@ -605,6 +614,31 @@ void GRenderWindow::TouchEndEvent() {
 }
 
 bool GRenderWindow::event(QEvent* event) {
+    switch (event->type()) {
+    case QEvent::TouchBegin:
+    case QEvent::TouchEnd:
+    case QEvent::TouchCancel: {
+        const auto* touch = static_cast<QTouchEvent*>(event);
+        const QPointF pos =
+            touch->points().isEmpty() ? QPointF{} : touch->points().first().position();
+        LOG_INFO(Frontend,
+                 "barry-touch: {} window {} {} at ({:.0f},{:.0f}), {} points, widget {}x{}, "
+                 "{} updates",
+                 BarryTouch::Now(), isSecondary() ? 1 : 0,
+                 event->type() == QEvent::TouchBegin ? "TouchBegin"
+                 : event->type() == QEvent::TouchEnd ? "TouchEnd"
+                                                     : "TouchCancel",
+                 pos.x(), pos.y(), touch->points().size(), width(), height(), touch_updates);
+        touch_updates = 0;
+        break;
+    }
+    case QEvent::TouchUpdate:
+        touch_updates++;
+        break;
+    default:
+        break;
+    }
+
     switch (event->type()) {
     case QEvent::TouchBegin:
         TouchBeginEvent(static_cast<QTouchEvent*>(event));

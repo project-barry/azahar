@@ -9,6 +9,7 @@
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/unique_ptr.hpp>
 #include "common/archives.h"
+#include "common/barry_touch_trace.h"
 #include "common/logging/log.h"
 #include "core/3ds.h"
 #include "core/core.h"
@@ -292,6 +293,19 @@ void Module::UpdatePadCallback(std::uintptr_t user_data, s64 cycles_late) {
         touch_entry.x = static_cast<u16>(x * Core::kScreenBottomWidth);
         touch_entry.y = static_cast<u16>(y * Core::kScreenBottomHeight);
         touch_entry.valid.Assign(pressed ? 1 : 0);
+
+        // project-barry touch trace: what the game can see.
+        static bool barry_was_pressed = false;
+        static u32 barry_samples = 0;
+        barry_samples++;
+        if (pressed != barry_was_pressed) {
+            LOG_INFO(Service_HID, "barry-touch: {} 3DS sees {} at ({},{}){}", BarryTouch::Now(),
+                     pressed ? "press" : "release", touch_entry.x, touch_entry.y,
+                     pressed ? std::string{}
+                             : fmt::format(" after {} samples", barry_samples));
+            barry_was_pressed = pressed;
+            barry_samples = 0;
+        }
 
         system.Movie().HandleTouchStatus(touch_entry);
     }
