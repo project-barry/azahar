@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> **Project Barry's additions to this fork were built with a coding agent:
+> [Claude Code](https://www.anthropic.com/claude-code), running Anthropic's
+> Claude Opus 5.5 (`claude-opus-5-5`).** This applies only to what Project
+> Barry added (the changes on the `thor-separate-windows` branch, for testing only): Claude wrote that code, its commit messages and this
+> note. Everything else is upstream [Azahar](https://github.com/azahar-emu/azahar)'s work, by its own authors. People set
+> the goals, made the decisions and did the hands-on testing. Review the code
+> before you rely on it. See [a note from lavachemist](https://github.com/project-barry), a human, on Project Barry and generative AI.
+
 ![Azahar Emulator](https://azahar-emu.org/resources/images/logo/azahar-name-and-logo.svg)
 
 ![Current Release](https://img.shields.io/github/v/release/azahar-emu/azahar?label=Current%20Release)
