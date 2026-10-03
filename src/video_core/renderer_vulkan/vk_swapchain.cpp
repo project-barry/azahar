@@ -249,10 +249,16 @@ void Swapchain::SetSurfaceProperties() {
     }
 
     // Select number of images in swap chain, we prefer one buffer in the background to work on
-    image_count = capabilities.minImageCount + 1;
+    // project-barry test: two more, so a window whose images come back late (Separate Windows on
+    // an AYN Thor) does not stall the emulation thread.
+    image_count = capabilities.minImageCount + 3;
     if (capabilities.maxImageCount > 0) {
         image_count = std::min(image_count, capabilities.maxImageCount);
     }
+    LOG_INFO(Render_Vulkan,
+             "barry-trace: swapchain {}x{}, {} images (surface min {} max {}), present mode {}",
+             extent.width, extent.height, image_count, capabilities.minImageCount,
+             capabilities.maxImageCount, vk::to_string(present_mode));
 
     // Prefer identity transform if possible
     transform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
